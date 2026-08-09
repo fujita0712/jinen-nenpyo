@@ -50,8 +50,11 @@ function PastReadingPageInner() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     })
-      .then((res) => {
-        if (!res.ok) throw new Error(`status ${res.status}`);
+      .then(async (res) => {
+        if (!res.ok) {
+          const body = await res.json().catch(() => null);
+          throw new Error(`status ${res.status}: ${body?.detail ?? body?.error ?? "unknown"}`);
+        }
         return res.json();
       })
       .then((data: PastReadingSegment) => {
