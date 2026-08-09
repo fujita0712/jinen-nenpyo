@@ -39,7 +39,7 @@ function LoadingPageInner() {
 
     // 最終ステップ表示後、待機してから遷移
     const t = setTimeout(() => {
-      router.push(`/reading/past?d=${d}`);
+      router.push(`/reading/past?d=${encodeURIComponent(d)}`);
     }, STEP_DURATION_MS + 1000);
     return () => clearTimeout(t);
   }, [stepIndex, d, router]);
