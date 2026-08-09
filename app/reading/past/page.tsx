@@ -10,6 +10,15 @@ import { calcConfidenceFromYesCount, nextAction } from "@/lib/confidence";
 import ConfidenceBadge from "@/components/ConfidenceBadge";
 import PastYearTable from "@/components/PastYearTable";
 import VerificationQuestions from "@/components/VerificationQuestions";
+import GeneratingProgress from "@/components/GeneratingProgress";
+
+const PAST_GENERATION_STEPS = [
+  "西洋占星術を読み解いています…",
+  "数秘術の算出結果を確認しています…",
+  "四柱推命の干支を照らし合わせています…",
+  "タロットの示す象徴を解釈しています…",
+  "4つの占術を統合し、文章にまとめています…",
+];
 
 const CANDIDATE_RANGES = ["20〜23才前後", "25〜28才前後", "28〜32才前後"];
 
@@ -82,10 +91,11 @@ function PastReadingPageInner() {
 
   if (generating || !segment) {
     return (
-      <main className="px-6 py-24 text-center">
-        <p className="font-serif text-lg text-jade-dark">過去年表を生成しています…</p>
-        <p className="text-xs text-gray-400 mt-2">4占術の結果をもとにAIが文章を組み立てています</p>
-      </main>
+      <GeneratingProgress
+        title="過去年表を生成しています"
+        subSteps={PAST_GENERATION_STEPS}
+        estimatedSeconds={35}
+      />
     );
   }
 

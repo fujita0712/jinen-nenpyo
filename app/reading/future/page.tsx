@@ -9,6 +9,14 @@ import { generateFutureTable, FutureCell } from "@/lib/mock/future-readings";
 import { seedFromString } from "@/lib/tarot";
 import FutureYearTablePreview from "@/components/FutureYearTablePreview";
 import ConfidenceBadge from "@/components/ConfidenceBadge";
+import GeneratingProgress from "@/components/GeneratingProgress";
+
+const FUTURE_GENERATION_STEPS = [
+  "現在から20年分の周期を計算しています…",
+  "土星回帰など主要な転機のタイミングを特定しています…",
+  "仕事・恋愛・金運・家族の4テーマを組み立てています…",
+  "年ごとの文章を仕上げています…",
+];
 
 export default function FutureReadingPage() {
   return (
@@ -79,10 +87,11 @@ function FutureReadingPageInner() {
 
   if (generating || !cells) {
     return (
-      <main className="px-6 py-24 text-center">
-        <p className="font-serif text-lg text-jade-dark">未来年表を生成しています…</p>
-        <p className="text-xs text-gray-400 mt-2">20年分のテーマをAIが組み立てています（1分ほどかかります）</p>
-      </main>
+      <GeneratingProgress
+        title="未来年表を生成しています"
+        subSteps={FUTURE_GENERATION_STEPS}
+        estimatedSeconds={50}
+      />
     );
   }
 
