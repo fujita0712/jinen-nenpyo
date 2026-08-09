@@ -119,7 +119,11 @@ function FutureReadingPageInner() {
         </p>
       )}
 
-      <FutureYearTablePreview cells={cells} paid={paid} />
+      <FutureYearTablePreview
+        cells={cells}
+        paid={paid}
+        paywallHref={`/paywall?d=${encodeURIComponent(d ?? "")}&confidence=${confidenceParam}`}
+      />
     </main>
   );
 }

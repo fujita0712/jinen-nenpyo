@@ -4,9 +4,11 @@ import { FutureCell, FUTURE_THEMES } from "@/lib/mock/future-readings";
 export default function FutureYearTablePreview({
   cells,
   paid,
+  paywallHref,
 }: {
   cells: FutureCell[];
   paid: boolean;
+  paywallHref: string;
 }) {
   const maxYearOffset = Math.max(...cells.map((c) => c.yearOffset));
   const rows = Array.from({ length: maxYearOffset + 1 }, (_, y) => y);
@@ -53,7 +55,7 @@ export default function FutureYearTablePreview({
       {!paid && (
         <div className="text-center pt-6">
           <Link
-            href="/paywall"
+            href={paywallHref}
             className="inline-block px-8 py-4 rounded-full bg-jade text-white text-lg font-medium hover:bg-jade-dark transition-colors"
           >
             未来年表PDFを受け取る
