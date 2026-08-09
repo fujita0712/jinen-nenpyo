@@ -1,10 +1,11 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { decodeReadingInput } from "@/lib/types";
 import { selectPastReadingSegment } from "@/lib/select-mock";
+import { PastReadingSegment } from "@/lib/mock/past-readings";
 import { calcConfidenceFromYesCount, nextAction } from "@/lib/confidence";
 import ConfidenceBadge from "@/components/ConfidenceBadge";
 import PastYearTable from "@/components/PastYearTable";
@@ -24,20 +25,66 @@ function PastReadingPageInner() {
   const searchParams = useSearchParams();
   const d = searchParams.get("d");
   const input = useMemo(() => decodeReadingInput(d), [d]);
-  const segment = useMemo(() => (input ? selectPastReadingSegment(input) : null), [input]);
+
+  const [segment, setSegment] = useState<PastReadingSegment | null>(null);
+  const [generating, setGenerating] = useState(true);
+  const [generationFailed, setGenerationFailed] = useState(false);
+
+  useEffect(() => {
+    if (!input) return;
+    let cancelled = false;
+    setGenerating(true);
+    setGenerationFailed(false);
+
+    fetch("/api/generate-past-reading", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(`status ${res.status}`);
+        return res.json();
+      })
+      .then((data: PastReadingSegment) => {
+        if (cancelled) return;
+        setSegment(data);
+      })
+      .catch((err) => {
+        console.error("AI生成に失敗、モックにフォールバック:", err);
+        if (cancelled) return;
+        setGenerationFailed(true);
+        setSegment(selectPastReadingSegment(input));
+      })
+      .finally(() => {
+        if (!cancelled) setGenerating(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [input]);
 
   const [baseYesCount, setBaseYesCount] = useState<number | null>(null);
   const [bonusYesCount, setBonusYesCount] = useState(0);
   const [selectedCandidate, setSelectedCandidate] = useState<string | null>(null);
   const [bonusAnswered, setBonusAnswered] = useState(false);
 
-  if (!input || !segment) {
+  if (!input) {
     return (
       <main className="px-6 py-16 text-center">
         <p className="text-gray-600">入力データが見つかりませんでした。</p>
         <Link href="/input" className="text-jade underline mt-4 inline-block">
           入力画面に戻る
         </Link>
+      </main>
+    );
+  }
+
+  if (generating || !segment) {
+    return (
+      <main className="px-6 py-24 text-center">
+        <p className="font-serif text-lg text-jade-dark">過去年表を生成しています…</p>
+        <p className="text-xs text-gray-400 mt-2">4占術の結果をもとにAIが文章を組み立てています</p>
       </main>
     );
   }
@@ -58,6 +105,12 @@ function PastReadingPageInner() {
       <h1 className="font-serif text-2xl text-jade-dark text-center mb-8">
         {input.name} さんの過去年表（無料鑑定）
       </h1>
+
+      {generationFailed && (
+        <p className="text-center text-xs text-amber-600 mb-4">
+          ※ AI生成に失敗したため、サンプル文章を表示しています
+        </p>
+      )}
 
       <PastYearTable segment={segment} />
 
