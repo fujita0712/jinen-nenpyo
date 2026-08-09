@@ -23,12 +23,17 @@ const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 export default function InputPage() {
   const router = useRouter();
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [postalLookup, setPostalLookup] = useState<{
+    status: "idle" | "loading" | "error";
+    message?: string;
+  }>({ status: "idle" });
 
   const {
     register,
     handleSubmit,
     watch,
     setValue,
+    getValues,
     control,
     formState: { errors, isSubmitting },
   } = useForm<InputFormValues>({
@@ -201,15 +206,42 @@ export default function InputPage() {
             />
             <button
               type="button"
-              className="px-3 py-2 text-sm rounded-md border border-jade text-jade whitespace-nowrap"
-              onClick={() => {
-                // TODO: Google Maps API 実接続はスコープ外(§5)。ダミーAPIキー想定で住所補完はモック。
-                setValue("birthPlace", "東京都千代田区");
+              disabled={postalLookup.status === "loading"}
+              className="px-3 py-2 text-sm rounded-md border border-jade text-jade whitespace-nowrap disabled:opacity-50"
+              onClick={async () => {
+                const raw = getValues("postalCode") ?? "";
+                const digits = raw.replace(/[^0-9]/g, "");
+                if (digits.length !== 7) {
+                  setPostalLookup({ status: "error", message: "郵便番号は7桁で入力してください" });
+                  return;
+                }
+                setPostalLookup({ status: "loading" });
+                try {
+                  const res = await fetch(
+                    `https://zipcloud.ibsnet.co.jp/api/search?zipcode=${digits}`
+                  );
+                  const data = await res.json();
+                  if (data.status !== 200 || !data.results || data.results.length === 0) {
+                    setPostalLookup({
+                      status: "error",
+                      message: data.message ?? "該当する住所が見つかりませんでした",
+                    });
+                    return;
+                  }
+                  const r = data.results[0];
+                  setValue("birthPlace", `${r.address1}${r.address2}${r.address3}`);
+                  setPostalLookup({ status: "idle" });
+                } catch {
+                  setPostalLookup({ status: "error", message: "住所検索に失敗しました。通信環境をご確認ください" });
+                }
               }}
             >
-              住所を自動補完
+              {postalLookup.status === "loading" ? "検索中…" : "住所を自動補完"}
             </button>
           </div>
+          {postalLookup.status === "error" && (
+            <p className="text-red-500 text-xs mb-2">{postalLookup.message}</p>
+          )}
           <input
             type="text"
             className="input"
