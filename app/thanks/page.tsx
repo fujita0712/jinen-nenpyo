@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -15,13 +15,37 @@ export default function ThanksPage() {
 function ThanksPageInner() {
   const searchParams = useSearchParams();
   const d = searchParams.get("d") ?? "";
+  const [emailStatus, setEmailStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+
+  useEffect(() => {
+    if (!d) return;
+    let cancelled = false;
+    setEmailStatus("sending");
+
+    fetch("/api/send-reading-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ d }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(`status ${res.status}`);
+        if (!cancelled) setEmailStatus("sent");
+      })
+      .catch((err) => {
+        console.error("send-reading-email failed:", err);
+        if (!cancelled) setEmailStatus("error");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [d]);
 
   return (
     <main className="px-6 py-16 max-w-lg mx-auto text-center">
       <h1 className="font-serif text-2xl text-jade-dark mb-4">ご注文ありがとうございます</h1>
-      <p className="text-sm text-gray-600 leading-relaxed mb-8">
-        24時間以内に、ご登録のメールアドレスへ年表PDFを送付いたします。今すぐ手元で確認したい場合は、下のボタンからその場でPDFを作成してダウンロードできます。
-      </p>
+
+      <EmailStatusMessage status={emailStatus} />
 
       <PdfDownloadButton d={d} />
 
@@ -38,6 +62,35 @@ function ThanksPageInner() {
         </p>
       </div>
     </main>
+  );
+}
+
+function EmailStatusMessage({ status }: { status: "idle" | "sending" | "sent" | "error" }) {
+  if (status === "sending") {
+    return (
+      <p className="text-sm text-gray-600 leading-relaxed mb-8">
+        ご登録のメールアドレスへ年表PDFを送信しています…（1分程度かかります）
+      </p>
+    );
+  }
+  if (status === "sent") {
+    return (
+      <p className="text-sm text-jade-dark leading-relaxed mb-8">
+        ご登録のメールアドレスへ年表PDFを送信しました。メールボックスをご確認ください（迷惑メールフォルダに入る場合があります）。
+      </p>
+    );
+  }
+  if (status === "error") {
+    return (
+      <p className="text-sm text-amber-600 leading-relaxed mb-8">
+        メール送信に時間がかかっているか、失敗した可能性があります。お手数ですが、下のボタンからPDFを直接ダウンロードしてください。
+      </p>
+    );
+  }
+  return (
+    <p className="text-sm text-gray-600 leading-relaxed mb-8">
+      ご登録のメールアドレスへ年表PDFを送付いたします。今すぐ手元で確認したい場合は、下のボタンからその場でPDFを作成してダウンロードできます。
+    </p>
   );
 }
 

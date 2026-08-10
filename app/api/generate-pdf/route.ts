@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generatePastReading } from "@/lib/ai/generate-past-reading";
-import { generateFutureReading } from "@/lib/ai/generate-future-reading";
-import { generateReadingPdf } from "@/lib/pdf/generate-reading-pdf";
+import { buildFullReadingPdf } from "@/lib/pdf/build-full-pdf";
 import { decodeReadingInput } from "@/lib/types";
 
 // 過去/未来の生成を並列実行しても合計50秒前後かかるため、タイムアウトを延長する
@@ -16,11 +14,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const [past, future] = await Promise.all([
-      generatePastReading(input),
-      generateFutureReading(input),
-    ]);
-    const pdfBuffer = await generateReadingPdf(input, past, future);
+    const pdfBuffer = await buildFullReadingPdf(input);
 
     return new NextResponse(new Uint8Array(pdfBuffer), {
       status: 200,
