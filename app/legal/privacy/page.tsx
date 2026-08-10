@@ -34,7 +34,7 @@ export default function PrivacyPage() {
 
       <section>
         <h2 className="font-medium text-gray-800 mb-2">6. お問合せ窓口</h2>
-        <p>（TODO: サポート用メールアドレスを記載してください）</p>
+        <p>prc.fujita@gmail.com</p>
       </section>
     </main>
   );
