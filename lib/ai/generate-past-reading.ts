@@ -6,7 +6,7 @@ import { sunSign, isNearSaturnReturn } from "@/lib/astrology";
 import { calcSizhu } from "@/lib/sizhu";
 import { drawCard, seedFromString } from "@/lib/tarot";
 import { PastReadingSegment } from "@/lib/mock/past-readings";
-import { containsBannedExpression } from "@/lib/banned-expressions";
+import { containsBannedExpression, findBannedMatch } from "@/lib/banned-expressions";
 
 const client = new Anthropic();
 
@@ -137,6 +137,8 @@ export async function generatePastReading(
 
   const allText = [...chapters.map((c) => c.body), ...highlights].join("\n");
   if (containsBannedExpression(allText)) {
+    const match = findBannedMatch(allText);
+    console.error("banned expression match:", match);
     throw new Error("banned expression detected in generated text");
   }
 
