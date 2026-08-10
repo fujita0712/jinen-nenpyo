@@ -4,6 +4,7 @@ import { ReadingInput, ageFromBirthDate } from "@/lib/types";
 import { calcNumerology } from "@/lib/numerology";
 import { sunSign, isNearSaturnReturn } from "@/lib/astrology";
 import { FutureCell, FUTURE_THEMES } from "@/lib/mock/future-readings";
+import { containsBannedExpression } from "@/lib/banned-expressions";
 
 const client = new Anthropic();
 
@@ -45,21 +46,6 @@ const YearSchema = z.object({
 });
 const ResponseSchema = z.object({ years: z.array(YearSchema) });
 
-const BANNED_PATTERNS = [
-  "当たる",
-  "必ずそうなる",
-  "絶対",
-  "100%",
-  "確実に",
-  "必ず",
-  "儲かる",
-  "治る",
-  "寿命",
-  "あなたにだけ当たる",
-];
-function containsBannedExpression(text: string): boolean {
-  return BANNED_PATTERNS.some((w) => text.includes(w));
-}
 
 const SYSTEM_PROMPT = `あなたは「人生年表」というサービスの未来年表(有料鑑定)の文章を書くライターです。
 西洋占星術・数秘術・四柱推命・タロットの4占術の結果を統合し、ユーザー本人の入力データに基づいた未来20年分の年表を書いてください。

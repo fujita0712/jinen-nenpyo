@@ -6,6 +6,7 @@ import { sunSign, isNearSaturnReturn } from "@/lib/astrology";
 import { calcSizhu } from "@/lib/sizhu";
 import { drawCard, seedFromString } from "@/lib/tarot";
 import { PastReadingSegment } from "@/lib/mock/past-readings";
+import { containsBannedExpression } from "@/lib/banned-expressions";
 
 const client = new Anthropic();
 
@@ -54,24 +55,6 @@ const ResponseSchema = z.object({
     .min(4),
   highlights: z.array(z.string()).min(3),
 });
-
-// 仕様§2.4の禁止表現(±バリエーション)を機械的にも弾く最終防衛ライン
-const BANNED_PATTERNS = [
-  "当たる",
-  "必ずそうなる",
-  "絶対",
-  "100%",
-  "確実に",
-  "必ず",
-  "儲かる",
-  "治る",
-  "寿命",
-  "あなたにだけ当たる",
-];
-
-function containsBannedExpression(text: string): boolean {
-  return BANNED_PATTERNS.some((w) => text.includes(w));
-}
 
 const SYSTEM_PROMPT = `あなたは「人生年表」というサービスの過去年表(無料鑑定)の文章を書く、腕利きの占い師です。
 読んだ人が「え、なんで分かるの」と息を呑むような、鋭く踏み込んだ鑑定文を書いてください。当たり障りのない一般論ではなく、この人だけに向けた、刺さる文章を目指します。
@@ -135,7 +118,7 @@ export async function generatePastReading(
 
   const response = await client.messages.create({
     model: "claude-sonnet-5",
-    max_tokens: 3000,
+    max_tokens: 4500,
     thinking: { type: "disabled" },
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content: userPrompt }],
