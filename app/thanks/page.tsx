@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -20,11 +20,10 @@ function ThanksPageInner() {
     <main className="px-6 py-16 max-w-lg mx-auto text-center">
       <h1 className="font-serif text-2xl text-jade-dark mb-4">ご注文ありがとうございます</h1>
       <p className="text-sm text-gray-600 leading-relaxed mb-8">
-        24時間以内に、ご登録のメールアドレスへ年表PDFを送付いたします。
+        24時間以内に、ご登録のメールアドレスへ年表PDFを送付いたします。今すぐ手元で確認したい場合は、下のボタンからその場でPDFを作成してダウンロードできます。
       </p>
 
-      {/* PDF生成はスコープ外のため、SVGによる1ページ分のプレビューをモック表示する(§5画面⑦) */}
-      <PdfPreviewMock />
+      <PdfDownloadButton d={d} />
 
       <div className="mt-10">
         <p className="text-xs text-gray-400 mb-3">マイページ ─ 1クリックで戻り表示</p>
@@ -42,31 +41,46 @@ function ThanksPageInner() {
   );
 }
 
-function PdfPreviewMock() {
+function PdfDownloadButton({ d }: { d: string }) {
+  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
+
+  const handleDownload = async () => {
+    setStatus("loading");
+    try {
+      const res = await fetch(`/api/generate-pdf?d=${encodeURIComponent(d)}`);
+      if (!res.ok) {
+        throw new Error(`status ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "jinsei-nenpyo.pdf";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setStatus("idle");
+    } catch {
+      setStatus("error");
+    }
+  };
+
   return (
-    <svg
-      viewBox="0 0 320 420"
-      className="mx-auto w-56 h-auto drop-shadow-md rounded-md bg-white"
-      role="img"
-      aria-label="年表PDFのプレビュー"
-    >
-      <rect x="0" y="0" width="320" height="420" fill="#ffffff" stroke="#e5e0dc" />
-      <text x="160" y="40" textAnchor="middle" fontSize="16" fill="#5C7C7A" fontFamily="serif">
-        人生年表
-      </text>
-      <line x1="24" y1="56" x2="296" y2="56" stroke="#e5e0dc" />
-      {Array.from({ length: 8 }).map((_, i) => (
-        <rect
-          key={i}
-          x="24"
-          y={72 + i * 40}
-          width="272"
-          height="28"
-          rx="4"
-          fill={i % 2 === 0 ? "#F4F0EE" : "#ffffff"}
-          stroke="#e5e0dc"
-        />
-      ))}
-    </svg>
+    <div className="flex flex-col items-center">
+      <button
+        type="button"
+        onClick={handleDownload}
+        disabled={status === "loading"}
+        className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-jade text-jade text-sm font-medium hover:bg-jade/5 transition-colors disabled:opacity-50"
+      >
+        {status === "loading" ? "PDFを作成しています…(通常45秒前後)" : "PDFを今すぐダウンロード"}
+      </button>
+      {status === "error" && (
+        <p className="text-xs text-red-500 mt-2">
+          PDFの作成に失敗しました。しばらくしてから再度お試しください。
+        </p>
+      )}
+    </div>
   );
 }
