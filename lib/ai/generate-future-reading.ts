@@ -9,6 +9,8 @@ const client = new Anthropic();
 
 const YEAR_COUNT = 20;
 
+const PERIOD_TYPE_ENUM = ["decisive", "turning_point", "endurance", "steady"] as const;
+
 const RESPONSE_JSON_SCHEMA = {
   type: "object",
   properties: {
@@ -22,8 +24,9 @@ const RESPONSE_JSON_SCHEMA = {
           love: { type: "string" },
           money: { type: "string" },
           family: { type: "string" },
+          periodType: { type: "string", enum: PERIOD_TYPE_ENUM as unknown as string[] },
         },
-        required: ["yearOffset", "work", "love", "money", "family"],
+        required: ["yearOffset", "work", "love", "money", "family", "periodType"],
         additionalProperties: false,
       },
     },
@@ -38,6 +41,7 @@ const YearSchema = z.object({
   love: z.string(),
   money: z.string(),
   family: z.string(),
+  periodType: z.enum(PERIOD_TYPE_ENUM),
 });
 const ResponseSchema = z.object({ years: z.array(YearSchema) });
 
@@ -65,7 +69,13 @@ const SYSTEM_PROMPT = `あなたは「人生年表」というサービスの未
 2. 各年について「仕事」「恋愛」「金運」「家族」の4テーマそれぞれに1〜2文の短い文章を書くこと(1テーマあたり40〜90文字程度)。
 3. 入力データ(性別・出生順位・過去のライフイベント・心配しているテーマ・占術の算出結果)を踏まえ、この人固有の傾向が感じられる文章にすること。ただし同じ表現の繰り返しは避け、年ごとにテーマの強弱や具体性を変化させること。
 4. 土星回帰(27〜30才前後、57〜60才前後)にあたる年齢の年は、そのテーマを明確に反映させること。
-5. 次の表現は絶対に使用禁止: 「当たる」「必ずそうなる」「絶対」「100%」「確実に」「必ず」「儲かる」「治る」「寿命」「あなたにだけ当たる」。代わりに「〜しやすい」「テーマが優勢」「傾向がある」「タイミングとして」「選択肢が増える」のような中立的な表現を使うこと。
+5. 各年(yearOffset)に、その年の性質を表す periodType を1つ割り当てること。値は以下の4種類のいずれか:
+   - "decisive"(勝負の年): 大きな決断・行動に踏み切りやすい年
+   - "turning_point"(転機): 環境や方向性が変わりやすい年
+   - "endurance"(耐える時期): プレッシャーや葛藤を抱えながら耐える傾向がある年
+   - "steady"(安定期): 落ち着いて過ごしやすい年
+   20年間のうち大半は"steady"とし、"decisive"は2〜3年、"turning_point"は2〜4年、"endurance"は2〜3年程度に絞ること(多用しすぎない)。土星回帰にあたる年は"turning_point"または"decisive"を優先すること。
+6. 次の表現は絶対に使用禁止: 「当たる」「必ずそうなる」「絶対」「100%」「確実に」「必ず」「儲かる」「治る」「寿命」「あなたにだけ当たる」。代わりに「〜しやすい」「テーマが優勢」「傾向がある」「タイミングとして」「選択肢が増える」のような中立的な表現を使うこと。
 
 出力は指定されたJSONスキーマに厳密に従い、yearsは必ず20件(yearOffset 0〜19)にすること。`;
 
@@ -138,6 +148,7 @@ export async function generateFutureReading(
         theme,
         text: themeText[theme],
         free: yearOffset === 0,
+        periodType: year?.periodType ?? "steady",
       });
     }
   }

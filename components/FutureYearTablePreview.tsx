@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FutureCell, FUTURE_THEMES } from "@/lib/mock/future-readings";
+import { PERIOD_META } from "@/lib/period-types";
 
 export default function FutureYearTablePreview({
   cells,
@@ -19,12 +20,25 @@ export default function FutureYearTablePreview({
         const rowCells = cells.filter((c) => c.yearOffset === yearOffset);
         const isFree = yearOffset === 0;
         const visible = paid || isFree;
+        const periodType = rowCells[0]?.periodType ?? "steady";
+        const meta = PERIOD_META[periodType];
 
         return (
-          <div key={yearOffset} className="border border-gray-100 rounded-lg overflow-hidden">
-            <div className="bg-jade/10 px-4 py-2 text-xs font-medium text-jade-dark">
-              {isFree ? "直近12ヶ月" : `${rowCells[0]?.age ?? ""}才頃`}
-              {isFree && <span className="ml-2 text-jade">無料公開中</span>}
+          <div
+            key={yearOffset}
+            className={`border border-gray-100 rounded-lg overflow-hidden ${meta.borderClassName}`}
+          >
+            <div className="bg-jade/10 px-4 py-2 text-xs font-medium text-jade-dark flex flex-wrap items-center gap-2">
+              <span>{isFree ? "直近12ヶ月" : `${rowCells[0]?.age ?? ""}才頃`}</span>
+              {isFree && <span className="text-jade">無料公開中</span>}
+              {periodType !== "steady" && (
+                <span
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${meta.badgeClassName}`}
+                >
+                  <span aria-hidden>{meta.mark}</span>
+                  {meta.label}
+                </span>
+              )}
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-gray-100">
               {FUTURE_THEMES.map((theme) => {

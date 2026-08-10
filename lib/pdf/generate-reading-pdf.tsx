@@ -11,6 +11,14 @@ import {
 import { ReadingInput } from "@/lib/types";
 import { PastReadingSegment } from "@/lib/mock/past-readings";
 import { FutureCell, FUTURE_THEMES } from "@/lib/mock/future-readings";
+import { PeriodType } from "@/lib/period-types";
+
+const PERIOD_PDF_META: Record<PeriodType, { label: string; mark: string; color: string; bg: string }> = {
+  decisive: { label: "勝負の年", mark: "◆", color: "#be123c", bg: "#fff1f2" },
+  turning_point: { label: "転機", mark: "▲", color: "#b45309", bg: "#fffbeb" },
+  endurance: { label: "耐える時期", mark: "●", color: "#475569", bg: "#f1f5f9" },
+  steady: { label: "安定期", mark: "―", color: "#3E5957", bg: "#F4F0EE" },
+};
 
 Font.register({
   family: "Noto Sans JP",
@@ -54,10 +62,22 @@ const styles = StyleSheet.create({
   chapterBlock: {
     marginBottom: 18,
   },
+  chapterHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 2,
+  },
   chapterTitle: {
     fontSize: 12,
     fontWeight: 700,
-    marginBottom: 2,
+  },
+  periodBadge: {
+    fontSize: 8,
+    fontWeight: 700,
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderRadius: 8,
   },
   chapterAgeRange: {
     fontSize: 9,
@@ -74,11 +94,16 @@ const styles = StyleSheet.create({
     borderBottomColor: "#E5E0DC",
     paddingBottom: 10,
   },
+  yearHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 6,
+  },
   yearLabel: {
     fontSize: 11,
     fontWeight: 700,
     color: "#5C7C7A",
-    marginBottom: 6,
   },
   themeRow: {
     flexDirection: "row",
@@ -132,13 +157,23 @@ function ReadingPdfDocument({
 
       <Page size="A4" style={styles.page}>
         <Text style={styles.sectionTitle}>過去年表</Text>
-        {past.chapters.map((chapter) => (
-          <View key={chapter.title} style={styles.chapterBlock} wrap={false}>
-            <Text style={styles.chapterTitle}>{chapter.title}</Text>
-            <Text style={styles.chapterAgeRange}>{chapter.ageRange}</Text>
-            <Text style={styles.chapterBody}>{chapter.body}</Text>
-          </View>
-        ))}
+        {past.chapters.map((chapter) => {
+          const meta = PERIOD_PDF_META[chapter.periodType];
+          return (
+            <View key={chapter.title} style={styles.chapterBlock} wrap={false}>
+              <View style={styles.chapterHeaderRow}>
+                <Text style={styles.chapterTitle}>{chapter.title}</Text>
+                <Text
+                  style={[styles.periodBadge, { color: meta.color, backgroundColor: meta.bg }]}
+                >
+                  {meta.mark} {meta.label}（{chapter.periodAge}）
+                </Text>
+              </View>
+              <Text style={styles.chapterAgeRange}>{chapter.ageRange}</Text>
+              <Text style={styles.chapterBody}>{chapter.body}</Text>
+            </View>
+          );
+        })}
         <Text style={styles.pageFooter} render={({ pageNumber }) => `${pageNumber}`} fixed />
       </Page>
 
@@ -147,9 +182,20 @@ function ReadingPdfDocument({
         {years.map((yearOffset) => {
           const rowCells = future.filter((c) => c.yearOffset === yearOffset);
           const label = yearOffset === 0 ? "直近12ヶ月" : `${rowCells[0]?.age ?? ""}才頃`;
+          const periodType = rowCells[0]?.periodType ?? "steady";
+          const meta = PERIOD_PDF_META[periodType];
           return (
             <View key={yearOffset} style={styles.yearBlock} wrap={false}>
-              <Text style={styles.yearLabel}>{label}</Text>
+              <View style={styles.yearHeaderRow}>
+                <Text style={styles.yearLabel}>{label}</Text>
+                {periodType !== "steady" && (
+                  <Text
+                    style={[styles.periodBadge, { color: meta.color, backgroundColor: meta.bg }]}
+                  >
+                    {meta.mark} {meta.label}
+                  </Text>
+                )}
+              </View>
               {FUTURE_THEMES.map((theme) => {
                 const cell = rowCells.find((c) => c.theme === theme);
                 if (!cell) return null;

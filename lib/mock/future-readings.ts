@@ -2,6 +2,8 @@
 // §7: LLM未接続のためテンプレート+入力値によるバリエーションで代替する
 // §2.4 禁止表現は使用しない
 
+import { PeriodType } from "@/lib/period-types";
+
 export type FutureTheme = "仕事" | "恋愛" | "金運" | "家族";
 export const FUTURE_THEMES: FutureTheme[] = ["仕事", "恋愛", "金運", "家族"];
 
@@ -11,6 +13,7 @@ export interface FutureCell {
   theme: FutureTheme;
   text: string;
   free: boolean;
+  periodType: PeriodType;
 }
 
 const THEME_TEMPLATES: Record<FutureTheme, string[]> = {
@@ -44,18 +47,33 @@ const THEME_TEMPLATES: Record<FutureTheme, string[]> = {
   ],
 };
 
+function isNearSaturnReturnAge(age: number): boolean {
+  return (age >= 27 && age <= 30) || (age >= 57 && age <= 60);
+}
+
+function periodTypeForYear(yearOffset: number, age: number, seed: number): PeriodType {
+  if (isNearSaturnReturnAge(age)) return "turning_point";
+  const bucket = (seed + yearOffset * 5) % 10;
+  if (bucket === 0) return "decisive";
+  if (bucket === 5) return "endurance";
+  return "steady";
+}
+
 export function generateFutureTable(currentAge: number, seed: number): FutureCell[] {
   const cells: FutureCell[] = [];
   for (let yearOffset = 0; yearOffset < 20; yearOffset++) {
+    const age = currentAge + yearOffset;
+    const periodType = periodTypeForYear(yearOffset, age, seed);
     FUTURE_THEMES.forEach((theme, themeIndex) => {
       const bank = THEME_TEMPLATES[theme];
       const idx = (seed + yearOffset * 3 + themeIndex * 7) % bank.length;
       cells.push({
         yearOffset,
-        age: currentAge + yearOffset,
+        age,
         theme,
         text: bank[idx],
         free: yearOffset === 0,
+        periodType,
       });
     });
   }

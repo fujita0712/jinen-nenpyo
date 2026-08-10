@@ -9,6 +9,7 @@ import { PastReadingSegment } from "@/lib/mock/past-readings";
 import { calcConfidenceFromYesCount, nextAction } from "@/lib/confidence";
 import ConfidenceBadge from "@/components/ConfidenceBadge";
 import PastYearTable from "@/components/PastYearTable";
+import PeriodLegend from "@/components/PeriodLegend";
 import VerificationQuestions from "@/components/VerificationQuestions";
 import GeneratingProgress from "@/components/GeneratingProgress";
 
@@ -125,6 +126,7 @@ function PastReadingPageInner() {
         </p>
       )}
 
+      <PeriodLegend />
       <PastYearTable segment={segment} />
 
       <div className="mt-4 text-xs text-gray-400 text-center">

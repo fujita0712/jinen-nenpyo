@@ -1,15 +1,27 @@
 import { PastReadingSegment } from "@/lib/mock/past-readings";
+import { PERIOD_META } from "@/lib/period-types";
 
 export default function PastYearTable({ segment }: { segment: PastReadingSegment }) {
   return (
     <div className="space-y-8">
-      {segment.chapters.map((chapter) => (
-        <div key={chapter.title}>
-          <h3 className="font-serif text-lg text-jade-dark">{chapter.title}</h3>
-          <p className="text-xs text-gray-400 mb-2">{chapter.ageRange}</p>
-          <p className="text-sm text-gray-700 leading-relaxed">{chapter.body}</p>
-        </div>
-      ))}
+      {segment.chapters.map((chapter) => {
+        const meta = PERIOD_META[chapter.periodType];
+        return (
+          <div key={chapter.title} className={`pl-4 ${meta.borderClassName}`}>
+            <div className="flex flex-wrap items-center gap-2 mb-1">
+              <h3 className="font-serif text-lg text-jade-dark">{chapter.title}</h3>
+              <span
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${meta.badgeClassName}`}
+              >
+                <span aria-hidden>{meta.mark}</span>
+                {meta.label}（{chapter.periodAge}）
+              </span>
+            </div>
+            <p className="text-xs text-gray-400 mb-2">{chapter.ageRange}</p>
+            <p className="text-sm text-gray-700 leading-relaxed">{chapter.body}</p>
+          </div>
+        );
+      })}
 
       <div className="p-5 rounded-lg bg-jade/10">
         <p className="text-sm font-medium text-jade-dark mb-2">ハイライト</p>

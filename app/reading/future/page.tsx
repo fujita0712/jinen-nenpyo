@@ -8,6 +8,7 @@ import { currentAge } from "@/lib/select-mock";
 import { generateFutureTable, FutureCell } from "@/lib/mock/future-readings";
 import { seedFromString } from "@/lib/tarot";
 import FutureYearTablePreview from "@/components/FutureYearTablePreview";
+import PeriodLegend from "@/components/PeriodLegend";
 import ConfidenceBadge from "@/components/ConfidenceBadge";
 import GeneratingProgress from "@/components/GeneratingProgress";
 
@@ -119,6 +120,7 @@ function FutureReadingPageInner() {
         </p>
       )}
 
+      <PeriodLegend />
       <FutureYearTablePreview
         cells={cells}
         paid={paid}

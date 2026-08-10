@@ -11,6 +11,8 @@ const client = new Anthropic();
 
 // output_config.format に渡す生の JSON Schema
 // (zodOutputFormat ヘルパーはインストール済み zod のバージョンと型が合わないため使わない)
+const PERIOD_TYPE_ENUM = ["decisive", "turning_point", "endurance", "steady"] as const;
+
 const RESPONSE_JSON_SCHEMA = {
   type: "object",
   properties: {
@@ -22,8 +24,10 @@ const RESPONSE_JSON_SCHEMA = {
           title: { type: "string" },
           ageRange: { type: "string" },
           body: { type: "string" },
+          periodType: { type: "string", enum: PERIOD_TYPE_ENUM as unknown as string[] },
+          periodAge: { type: "string" },
         },
-        required: ["title", "ageRange", "body"],
+        required: ["title", "ageRange", "body", "periodType", "periodAge"],
         additionalProperties: false,
       },
     },
@@ -43,6 +47,8 @@ const ResponseSchema = z.object({
         title: z.string(),
         ageRange: z.string(),
         body: z.string(),
+        periodType: z.enum(PERIOD_TYPE_ENUM),
+        periodAge: z.string(),
       })
     )
     .min(4),
@@ -81,6 +87,13 @@ const SYSTEM_PROMPT = `あなたは「人生年表」というサービスの過
 4. 他のユーザーにも使い回せるような一般論・テンプレート文を書かないこと。入力データ(性別・出生順位・兄弟構成・好きな教科・過去のライフイベント・心配しているテーマ・占術の算出結果)から具体的に分岐した、この人だけの文章にすること。
 5. 次の表現は絶対に使用禁止: 「当たる」「必ずそうなる」「絶対」「100%」「確実に」「必ず」「儲かる」「治る」「寿命」「あなたにだけ当たる」。代わりに「〜しやすい」「テーマが優勢」「傾向がある」「タイミングとして」「選択肢が増える」のような中立的な表現を使うこと。
 6. 最後に、4つのChapterの内容を踏まえた3行のハイライト(highlights)を書くこと。
+7. 各Chapterに、その時期の性質を表す periodType を1つ割り当てること。値は以下の4種類のいずれか:
+   - "decisive"(勝負の年): 大きな決断・行動に踏み切った時期
+   - "turning_point"(転機): 環境や方向性が変わった時期
+   - "endurance"(耐える時期): プレッシャーや葛藤を抱えながら耐えていた時期
+   - "steady"(安定期): 土台形成・落ち着いていた時期
+   4つのChapterのperiodTypeは、少なくとも2種類以上のバリエーションを持たせ、全て同じ値にしないこと。土星回帰の時期(27〜30才前後)にかかるChapterは"decisive"または"turning_point"を優先すること。
+8. 各Chapterに periodAge(そのperiodTypeを象徴する具体的な年齢、例:「16才頃」)を1つ添えること。ageRangeの範囲内の年齢にすること。
 
 出力は指定されたJSONスキーマに厳密に従うこと。`;
 
