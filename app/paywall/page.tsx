@@ -57,7 +57,7 @@ function PaywallPageInner() {
           確信度が4未満のため、現時点では課金にお進みいただけません。
           <br />
           <Link href={`/reading/past?d=${encodeURIComponent(d ?? "")}`} className="underline">
-            過去鑑定に戻って無料で再生成する
+            過去鑑定に戻って無料でやり直す
           </Link>
         </div>
       )}

@@ -67,7 +67,7 @@ export default function HomePage() {
           ))}
         </div>
         <p className="text-center text-xs text-gray-400 mt-4">
-          ※ あなたのテーマはここに表示されます（実際の鑑定はご自身の入力データから生成されます）
+          ※ あなたのテーマはここに表示されます（実際の鑑定はご自身の入力データをもとに作成されます）
         </p>
       </section>
 

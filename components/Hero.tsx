@@ -9,7 +9,7 @@ export default function Hero() {
         人生の20年を、設計されてみませんか。
       </h1>
       <p className="mt-6 text-base md:text-lg text-gray-600 leading-relaxed">
-        西洋占星術・数秘術・タロット・四柱推命をAIが読み解き、
+        西洋占星術・数秘術・タロット・四柱推命を掛け合わせて読み解き、
         <br className="hidden md:block" />
         未来年表にしたPDFを、24時間以内にメールでお届けします。
       </p>

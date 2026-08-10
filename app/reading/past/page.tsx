@@ -95,7 +95,7 @@ function PastReadingPageInner() {
   if (generating || !segment) {
     return (
       <GeneratingProgress
-        title="過去年表を生成しています"
+        title="過去年表を鑑定しています"
         subSteps={PAST_GENERATION_STEPS}
         estimatedSeconds={35}
       />
@@ -121,7 +121,7 @@ function PastReadingPageInner() {
 
       {generationFailed && (
         <p className="text-center text-xs text-amber-600 mb-4">
-          ※ AI生成に失敗したため、サンプル文章を表示しています
+          ※ ただいまアクセスが集中しているため、サンプル文章を表示しています
         </p>
       )}
 
@@ -165,7 +165,7 @@ function PastReadingPageInner() {
                 </div>
                 {selectedCandidate && (
                   <p className="text-xs text-gray-400 mt-3">
-                    「{selectedCandidate}」を反映して再生成しました（モック表示）。
+                    「{selectedCandidate}」を反映して鑑定を更新しました（モック表示）。
                     {/* TODO: 実際の再生成はLLM未接続のためモック(§7) */}
                   </p>
                 )}

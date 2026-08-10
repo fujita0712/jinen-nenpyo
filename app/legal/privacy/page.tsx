@@ -12,7 +12,7 @@ export default function PrivacyPage() {
 
       <section>
         <h2 className="font-medium text-gray-800 mb-2">2. 利用目的</h2>
-        <p>取得した情報は、占い鑑定の生成および鑑定結果のメール送付の目的にのみ使用します。それ以外の目的では利用しません。</p>
+        <p>取得した情報は、占い鑑定の作成および鑑定結果のメール送付の目的にのみ使用します。それ以外の目的では利用しません。</p>
       </section>
 
       <section>

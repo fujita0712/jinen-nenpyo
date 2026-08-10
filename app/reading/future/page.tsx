@@ -91,7 +91,7 @@ function FutureReadingPageInner() {
   if (generating || !cells) {
     return (
       <GeneratingProgress
-        title="未来年表を生成しています"
+        title="未来年表を鑑定しています"
         subSteps={FUTURE_GENERATION_STEPS}
         estimatedSeconds={50}
       />
@@ -115,7 +115,7 @@ function FutureReadingPageInner() {
 
       {generationFailed && (
         <p className="text-center text-xs text-amber-600 mb-6">
-          ※ AI生成に失敗したため、サンプル文章を表示しています
+          ※ ただいまアクセスが集中しているため、サンプル文章を表示しています
         </p>
       )}
 

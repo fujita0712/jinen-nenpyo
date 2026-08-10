@@ -104,7 +104,7 @@ export default function InputPage() {
               <Link href="/legal/privacy" target="_blank" className="text-jade underline">
                 プライバシーポリシー
               </Link>
-              に同意します（生年月日等の情報は占い鑑定生成・メール送付の目的にのみ使用されます）
+              に同意します（生年月日等の情報は占い鑑定の作成・メール送付の目的にのみ使用されます）
             </span>
           </label>
           {errors.privacyAgree && (
