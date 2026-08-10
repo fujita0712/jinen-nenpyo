@@ -33,12 +33,14 @@ export const metadata: Metadata = {
     siteName: "人生年表",
     locale: "ja_JP",
     type: "website",
+    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "人生年表",
     description:
       "西洋占星術・数秘術・タロット・四柱推命を統合し、あなたの過去と未来20年を年表にしてお届けします。",
+    images: ["/og-image.png"],
   },
 };
 

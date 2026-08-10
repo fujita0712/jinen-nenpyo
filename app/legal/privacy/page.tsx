@@ -17,12 +17,16 @@ export default function PrivacyPage() {
 
       <section>
         <h2 className="font-medium text-gray-800 mb-2">3. 保存期間</h2>
-        <p>お預かりした情報は、サーバー上で取得から60日間保存した後、自動的に削除されます。</p>
+        <p>
+          ご入力いただいた情報は、鑑定結果の作成・メール送付の処理が完了すると同時に破棄され、当社サーバー上に保存されることはありません。
+        </p>
       </section>
 
       <section>
-        <h2 className="font-medium text-gray-800 mb-2">4. 第三者提供</h2>
-        <p>法令に基づく場合を除き、取得した情報を第三者に提供することはありません。</p>
+        <h2 className="font-medium text-gray-800 mb-2">4. 業務委託先・第三者提供</h2>
+        <p>
+          鑑定文章の作成にAnthropic社のAI技術（Claude API）を、鑑定結果メールの送付にResend社のメール配信サービスを、それぞれ業務委託先として利用しています。これらの委託先には、鑑定の作成・送付に必要な範囲でのみ情報を取り扱わせており、法令に基づく場合を除き、これら業務委託先以外の第三者に情報を提供することはありません。
+        </p>
       </section>
 
       <section>

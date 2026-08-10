@@ -21,7 +21,7 @@ export default function Hero() {
       </Link>
       <div className="mt-6 text-sm text-gray-500 space-y-1">
         <p>・氏名・生年月日・出生時間の入力は約90秒</p>
-        <p>・お預かりした情報は60日間で自動削除されます</p>
+        <p>・入力情報は鑑定の作成・送付にのみ使用し、サーバーに保存されません</p>
       </div>
     </section>
   );
