@@ -118,7 +118,7 @@ export async function generatePastReading(
 
   const response = await client.messages.create({
     model: "claude-sonnet-5",
-    max_tokens: 4500,
+    max_tokens: 6000,
     thinking: { type: "disabled" },
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content: userPrompt }],
