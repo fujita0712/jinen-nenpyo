@@ -14,6 +14,7 @@ export interface FutureCell {
   text: string;
   free: boolean;
   periodType: PeriodType;
+  advice: string;
 }
 
 const THEME_TEMPLATES: Record<FutureTheme, string[]> = {
@@ -59,11 +60,20 @@ function periodTypeForYear(yearOffset: number, age: number, seed: number): Perio
   return "steady";
 }
 
+const ADVICE_BY_TYPE: Record<PeriodType, string[]> = {
+  decisive: ["迷ったら動く方を選ぶタイミングです。", "小さく試すより、腹をくくって進める年。"],
+  turning_point: ["環境を変える選択肢を検討してみましょう。", "これまでのやり方に固執しすぎないこと。"],
+  endurance: ["一人で抱え込まず、早めに相談を。", "無理に結果を急がず、力を溜める時期。"],
+  steady: ["今のペースを維持で十分です。", "特別なことをせず、日々を大切に。"],
+};
+
 export function generateFutureTable(currentAge: number, seed: number): FutureCell[] {
   const cells: FutureCell[] = [];
   for (let yearOffset = 0; yearOffset < 20; yearOffset++) {
     const age = currentAge + yearOffset;
     const periodType = periodTypeForYear(yearOffset, age, seed);
+    const adviceBank = ADVICE_BY_TYPE[periodType];
+    const advice = adviceBank[(seed + yearOffset) % adviceBank.length];
     FUTURE_THEMES.forEach((theme, themeIndex) => {
       const bank = THEME_TEMPLATES[theme];
       const idx = (seed + yearOffset * 3 + themeIndex * 7) % bank.length;
@@ -74,6 +84,7 @@ export function generateFutureTable(currentAge: number, seed: number): FutureCel
         text: bank[idx],
         free: yearOffset === 0,
         periodType,
+        advice,
       });
     });
   }

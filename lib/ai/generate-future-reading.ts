@@ -26,8 +26,9 @@ const RESPONSE_JSON_SCHEMA = {
           money: { type: "string" },
           family: { type: "string" },
           periodType: { type: "string", enum: PERIOD_TYPE_ENUM as unknown as string[] },
+          advice: { type: "string" },
         },
-        required: ["yearOffset", "work", "love", "money", "family", "periodType"],
+        required: ["yearOffset", "work", "love", "money", "family", "periodType", "advice"],
         additionalProperties: false,
       },
     },
@@ -43,6 +44,7 @@ const YearSchema = z.object({
   money: z.string(),
   family: z.string(),
   periodType: z.enum(PERIOD_TYPE_ENUM),
+  advice: z.string(),
 });
 const ResponseSchema = z.object({ years: z.array(YearSchema) });
 
@@ -61,7 +63,8 @@ const SYSTEM_PROMPT = `あなたは「人生年表」というサービスの未
    - "endurance"(耐える時期): プレッシャーや葛藤を抱えながら耐える傾向がある年
    - "steady"(安定期): 落ち着いて過ごしやすい年
    20年間のうち大半は"steady"とし、"decisive"は2〜3年、"turning_point"は2〜4年、"endurance"は2〜3年程度に絞ること(多用しすぎない)。土星回帰にあたる年は"turning_point"または"decisive"を優先すること。
-6. 次の表現は絶対に使用禁止: 「当たる」「必ずそうなる」「絶対」「100%」「確実に」「必ず」「儲かる」「治る」「寿命」「あなたにだけ当たる」。代わりに「〜しやすい」「テーマが優勢」「傾向がある」「タイミングとして」「選択肢が増える」のような中立的な表現を使うこと。
+6. 各年に advice(一言アドバイス)を1つ添えること。periodTypeが"decisive"「"turning_point"「"endurance"の年は、その年に取るべき具体的な行動や心構えを、20〜40文字程度で踏み込んで書くこと(例:「今の職場に留まるより、動くなら今」「一人で抱え込まず、早めに相談を」)。"steady"の年は「今のペースを維持で十分」のような軽い一言で構わない。
+7. 次の表現は絶対に使用禁止: 「当たる」「必ずそうなる」「絶対」「100%」「必ず」「儲かる」「治る」「寿命」「あなたにだけ当たる」。代わりに「〜しやすい」「テーマが優勢」「傾向がある」「タイミングとして」「選択肢が増える」のような中立的な表現を使うこと。
 
 出力は指定されたJSONスキーマに厳密に従い、yearsは必ず20件(yearOffset 0〜19)にすること。`;
 
@@ -95,7 +98,7 @@ export async function generateFutureReading(
 
   const response = await client.messages.create({
     model: "claude-sonnet-5",
-    max_tokens: 8000,
+    max_tokens: 10000,
     thinking: { type: "disabled" },
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content: userPrompt }],
@@ -110,7 +113,7 @@ export async function generateFutureReading(
   const parsed = ResponseSchema.parse(JSON.parse(textBlock.text));
 
   const allText = parsed.years
-    .map((y) => `${y.work}${y.love}${y.money}${y.family}`)
+    .map((y) => `${y.work}${y.love}${y.money}${y.family}${y.advice}`)
     .join("");
   if (containsBannedExpression(allText)) {
     throw new Error("banned expression detected in generated text");
@@ -135,6 +138,7 @@ export async function generateFutureReading(
         text: themeText[theme],
         free: yearOffset === 0,
         periodType: year?.periodType ?? "steady",
+        advice: year?.advice ?? "今のペースを維持で十分です。",
       });
     }
   }
