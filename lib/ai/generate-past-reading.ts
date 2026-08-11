@@ -1,11 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
-import { ReadingInput, ageFromBirthDate } from "@/lib/types";
-import { calcNumerology } from "@/lib/numerology";
-import { sunSign, isNearSaturnReturn } from "@/lib/astrology";
-import { calcSizhu } from "@/lib/sizhu";
+import { ReadingInput } from "@/lib/types";
+import { computeDivinationSummary } from "@/lib/divination-summary";
 import { drawCard, seedFromString } from "@/lib/tarot";
-import { PastReadingSegment } from "@/lib/mock/past-readings";
+import { PastReadingSegment, PAST_THEMES } from "@/lib/mock/past-readings";
 import { containsBannedExpression, findBannedMatch } from "@/lib/banned-expressions";
 
 const client = new Anthropic();
@@ -16,8 +14,8 @@ const PERIOD_TYPE_ENUM = ["decisive", "turning_point", "endurance", "steady"] as
 
 // Claude の構造化出力(output_config.format)は配列の minItems/maxItems を実質サポートしない
 // (0 or 1 のみ許可され、それ以外を指定すると400エラーになる)。配列の長さで「章が足りない」
-// 不具合が起きたため、chapter1〜4 / highlight1〜3 を個別の必須プロパティとして持たせ、
-// スキーマの required 制約(こちらは確実に強制される)で4章・3行を保証する。
+// 不具合が起きたため、chapter1〜4 / highlight1〜3 / insightWork〜Family を個別の必須プロパティ
+// として持たせ、スキーマの required 制約(こちらは確実に強制される)で件数を保証する。
 const CHAPTER_SCHEMA = {
   type: "object",
   properties: {
@@ -41,8 +39,24 @@ const RESPONSE_JSON_SCHEMA = {
     highlight1: { type: "string" },
     highlight2: { type: "string" },
     highlight3: { type: "string" },
+    insightWork: { type: "string" },
+    insightLove: { type: "string" },
+    insightMoney: { type: "string" },
+    insightFamily: { type: "string" },
   },
-  required: ["chapter1", "chapter2", "chapter3", "chapter4", "highlight1", "highlight2", "highlight3"],
+  required: [
+    "chapter1",
+    "chapter2",
+    "chapter3",
+    "chapter4",
+    "highlight1",
+    "highlight2",
+    "highlight3",
+    "insightWork",
+    "insightLove",
+    "insightMoney",
+    "insightFamily",
+  ],
   additionalProperties: false,
 } as const;
 
@@ -62,6 +76,10 @@ const ResponseSchema = z.object({
   highlight1: z.string(),
   highlight2: z.string(),
   highlight3: z.string(),
+  insightWork: z.string(),
+  insightLove: z.string(),
+  insightMoney: z.string(),
+  insightFamily: z.string(),
 });
 
 const SYSTEM_PROMPT = `あなたは「人生年表」というサービスの過去年表(無料鑑定)の文章を書く、腕利きの占い師です。
@@ -90,7 +108,7 @@ const SYSTEM_PROMPT = `あなたは「人生年表」というサービスの過
    - Chapter 2: 中学〜高校(13〜18才)
    - Chapter 3: 大学〜20代前半(18〜25才)
    - Chapter 4: 20代後半〜現在(25才〜現在)
-2. 各Chapterの本文(body)には、次の5項目のうち最低3つを必ず含めること: 年齢(具体的な年齢や年代)/出生順位(長子・中間・末子など)/兄弟構成(人数)/感情の描写/具体的な行動カテゴリ
+2. 各Chapterの本文(body)は400〜600文字程度の分量を持たせ、読みごたえのある内容にすること。次の5項目のうち最低3つを必ず含めること: 年齢(具体的な年齢や年代)/出生順位(長子・中間・末子など)/兄弟構成(人数)/感情の描写/具体的な行動カテゴリ
 3. 年齢の言及には必ず±2年程度の幅を持たせること(例:「15〜17才前後」「24〜27才頃」)。単一の年齢を断定的に書かない。
 4. 他のユーザーにも使い回せるような一般論・テンプレート文を書かないこと。入力データ(性別・出生順位・兄弟構成・好きな教科・過去のライフイベント・心配しているテーマ・占術の算出結果)から具体的に分岐した、この人だけの文章にすること。
 5. 次の表現は絶対に使用禁止: 「当たる」「必ずそうなる」「絶対」「100%」「確実に」「必ず」「儲かる」「治る」「寿命」「あなたにだけ当たる」。言い切り調で書きつつも、この禁止表現だけは避けること(「〜だった」「〜していた」のような事実断定調は問題ない。問題なのは上記の絶対視・保証を示す語のみ)。
@@ -102,25 +120,21 @@ const SYSTEM_PROMPT = `あなたは「人生年表」というサービスの過
    - "steady"(安定期): 土台形成・落ち着いていた時期
    4つのChapterのperiodTypeは、少なくとも2種類以上のバリエーションを持たせ、全て同じ値にしないこと。土星回帰の時期(27〜30才前後)にかかるChapterは"decisive"または"turning_point"を優先すること。
 8. 各Chapterに periodAge(そのperiodTypeを象徴する具体的な年齢、例:「16才頃」)を1つ添えること。ageRangeの範囲内の年齢にすること。
+9. 4つのChapterとは別に、「仕事」「恋愛」「金運」「家族」の4テーマそれぞれについて、これまでの人生の傾向が現在このテーマにどう表れているかを insightWork / insightLove / insightMoney / insightFamily として書くこと(各60〜100文字程度)。Chapterで語った具体的なエピソードと矛盾しないよう、そこから自然に導かれる内容にすること。
 
 出力は指定されたJSONスキーマに厳密に従うこと。`;
 
 export async function generatePastReading(
   input: ReadingInput
 ): Promise<PastReadingSegment> {
-  const age = ageFromBirthDate(input.birthDate);
-  const numerology = calcNumerology(input.name, input.birthDate);
-  const sign = sunSign(input.birthDate);
-  const sizhu = calcSizhu(input.birthDate, input.birthTime);
-  const tarot = drawCard(seedFromString(input.name + input.birthDate));
-  const nearSaturnReturn = isNearSaturnReturn(age);
+  const d = computeDivinationSummary(input);
 
   const userPrompt = `以下はユーザーの入力データと、4占術による算出結果です。これらを踏まえて過去年表を書いてください。
 
 【基本情報】
 氏名: ${input.name}
 性別: ${input.gender}
-現在の年齢: ${age}才
+現在の年齢: ${d.age}才
 出生順位: ${input.birthOrder}
 兄の人数: ${input.olderSiblings}人 / 弟妹の人数: ${input.youngerSiblings}人
 小学生時代に好きだった教科: ${[...input.favoriteSubjects, input.favoriteSubjectOther].filter(Boolean).join("、") || "特になし"}
@@ -128,14 +142,14 @@ export async function generatePastReading(
 今心配しているテーマ: ${input.concerns.join("、") || "特になし"}
 
 【4占術の算出結果(この情報を文章内で自然に活かすこと)】
-西洋占星術: 太陽星座は${sign}。土星回帰の時期に${nearSaturnReturn ? "近い、または通過中" : "まだ距離がある"}
-数秘術: ライフパスナンバー${numerology.lifePath}、ディスティニーナンバー${numerology.destiny}、ソウルナンバー${numerology.soul}
-四柱推命: 年柱${sizhu.yearPillar}・月柱${sizhu.monthPillar}・日柱${sizhu.dayPillar}・時柱${sizhu.hourPillar}(${sizhu.daiun})
-タロット: ${tarot.name}${tarot.reversed ? "(逆位置)" : "(正位置)"}が示された`;
+西洋占星術: 太陽星座は${d.sunSign}。土星回帰の時期に${d.nearSaturnReturn ? "近い、または通過中" : "まだ距離がある"}
+数秘術: ライフパスナンバー${d.lifePath}、ディスティニーナンバー${d.destiny}、ソウルナンバー${d.soul}
+四柱推命: 年柱${d.yearPillar}・月柱${d.monthPillar}・日柱${d.dayPillar}・時柱${d.hourPillar}(${d.daiun})
+タロット: ${d.tarotName}${d.tarotReversed ? "(逆位置)" : "(正位置)"}が示された`;
 
   const response = await client.messages.create({
     model: "claude-sonnet-5",
-    max_tokens: 6000,
+    max_tokens: 9000,
     thinking: { type: "disabled" },
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content: userPrompt }],
@@ -181,8 +195,9 @@ export async function generatePastReading(
 
   const chapters = [parsed.chapter1, parsed.chapter2, parsed.chapter3, parsed.chapter4] as const;
   const highlights = [parsed.highlight1, parsed.highlight2, parsed.highlight3] as const;
+  const insightTexts = [parsed.insightWork, parsed.insightLove, parsed.insightMoney, parsed.insightFamily] as const;
 
-  const allText = [...chapters.map((c) => c.body), ...highlights].join("\n");
+  const allText = [...chapters.map((c) => c.body), ...highlights, ...insightTexts].join("\n");
   if (containsBannedExpression(allText)) {
     const match = findBannedMatch(allText);
     console.error("banned expression match:", match);
@@ -194,5 +209,11 @@ export async function generatePastReading(
     matchLabel: "AI生成",
     chapters: [chapters[0], chapters[1], chapters[2], chapters[3]],
     highlights: [highlights[0], highlights[1], highlights[2]],
+    themeInsights: [
+      { theme: PAST_THEMES[0], text: insightTexts[0] },
+      { theme: PAST_THEMES[1], text: insightTexts[1] },
+      { theme: PAST_THEMES[2], text: insightTexts[2] },
+      { theme: PAST_THEMES[3], text: insightTexts[3] },
+    ],
   };
 }

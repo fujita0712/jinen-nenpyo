@@ -7,9 +7,11 @@ import { decodeReadingInput } from "@/lib/types";
 import { selectPastReadingSegment } from "@/lib/select-mock";
 import { PastReadingSegment } from "@/lib/mock/past-readings";
 import { calcConfidenceFromYesCount, nextAction } from "@/lib/confidence";
+import { computeDivinationSummary } from "@/lib/divination-summary";
 import ConfidenceBadge from "@/components/ConfidenceBadge";
 import PastYearTable from "@/components/PastYearTable";
 import PeriodLegend from "@/components/PeriodLegend";
+import DivinationSummary from "@/components/DivinationSummary";
 import VerificationQuestions from "@/components/VerificationQuestions";
 import GeneratingProgress from "@/components/GeneratingProgress";
 
@@ -35,6 +37,7 @@ function PastReadingPageInner() {
   const searchParams = useSearchParams();
   const d = searchParams.get("d");
   const input = useMemo(() => decodeReadingInput(d), [d]);
+  const divination = useMemo(() => (input ? computeDivinationSummary(input) : null), [input]);
 
   const [segment, setSegment] = useState<PastReadingSegment | null>(null);
   const [generating, setGenerating] = useState(true);
@@ -126,6 +129,7 @@ function PastReadingPageInner() {
         </p>
       )}
 
+      {divination && <DivinationSummary summary={divination} />}
       <PeriodLegend />
       <PastYearTable segment={segment} />
 

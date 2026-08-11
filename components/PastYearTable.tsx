@@ -23,6 +23,18 @@ export default function PastYearTable({ segment }: { segment: PastReadingSegment
         );
       })}
 
+      <div>
+        <p className="text-sm font-medium text-jade-dark mb-3">テーマ別の傾向</p>
+        <div className="grid grid-cols-2 gap-3">
+          {segment.themeInsights.map((insight) => (
+            <div key={insight.theme} className="p-3 rounded-lg border border-gray-100 bg-white">
+              <p className="text-xs text-gray-400 mb-1">{insight.theme}</p>
+              <p className="text-sm text-gray-700 leading-snug">{insight.text}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="p-5 rounded-lg bg-jade/10">
         <p className="text-sm font-medium text-jade-dark mb-2">ハイライト</p>
         <ul className="space-y-1 text-sm text-gray-700">

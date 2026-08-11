@@ -13,11 +13,20 @@ export interface Chapter {
   periodAge: string;
 }
 
+export type PastTheme = "仕事" | "恋愛" | "金運" | "家族";
+export const PAST_THEMES: PastTheme[] = ["仕事", "恋愛", "金運", "家族"];
+
+export interface ThemeInsight {
+  theme: PastTheme;
+  text: string;
+}
+
 export interface PastReadingSegment {
   id: string;
   matchLabel: string; // デバッグ/選定確認用
   chapters: [Chapter, Chapter, Chapter, Chapter];
   highlights: [string, string, string];
+  themeInsights: [ThemeInsight, ThemeInsight, ThemeInsight, ThemeInsight];
 }
 
 export const PAST_READING_SEGMENTS: PastReadingSegment[] = [
@@ -63,6 +72,12 @@ export const PAST_READING_SEGMENTS: PastReadingSegment[] = [
       "20〜22才前後の自立行動が、その後のキャリア観の土台になりやすい時期です",
       "27〜30才の転職テーマは、責任感と自分らしさの再設計として現れやすい傾向です",
     ],
+    themeInsights: [
+      { theme: "仕事", text: "長子として培った「率先して動く」姿勢が評価の軸になってきた一方、指示待ちの後輩への苛立ちを感じる場面もあったはずです。" },
+      { theme: "恋愛", text: "相手をリードする役回りに慣れている分、弱さを見せることへの抵抗感が関係の深まりを遅らせてきた傾向があります。" },
+      { theme: "金運", text: "計画的に貯める堅実さがある一方、家族を支える意識から自分への投資を後回しにしがちだったのではないでしょうか。" },
+      { theme: "家族", text: "下のきょうだいの手本であり続けた反動で、自分自身が甘えることに慣れていない部分が今も残っています。" },
+    ],
   },
   {
     id: "male-middle-marriage",
@@ -105,6 +120,12 @@ export const PAST_READING_SEGMENTS: PastReadingSegment[] = [
       "中間子としてのバランサー気質が10代の対人関係の基礎になっている傾向です",
       "20〜23才の環境変化が、自分の価値観を言語化する転機になりやすい時期です",
       "28〜31才の結婚というテーマは、バランス感覚と主導権のせめぎ合いとして現れやすい傾向です",
+    ],
+    themeInsights: [
+      { theme: "仕事", text: "調整役としての評価は高い一方、自分の意見を最後まで押し通す場面では中間子らしい遠慮が顔を出しやすい傾向です。" },
+      { theme: "恋愛", text: "相手の顔色を読むのが得意な分、自分の本音を後回しにして関係のバランスを取ってきたのではないでしょうか。" },
+      { theme: "金運", text: "上とも下とも比較されてきた反動で、堅実さを見せることで自分の価値を証明しようとする金銭感覚があります。" },
+      { theme: "家族", text: "板挟みになりやすい立場だった分、家庭内の空気を読む力は誰よりも磨かれてきたはずです。" },
     ],
   },
   {
@@ -149,6 +170,12 @@ export const PAST_READING_SEGMENTS: PastReadingSegment[] = [
       "20〜23才の留学・独立行動は、孤独感と自由の実感が同居しやすい時期です",
       "28〜30才の独立テーマは、自由と責任のバランスを取り直す過程として現れやすい傾向です",
     ],
+    themeInsights: [
+      { theme: "仕事", text: "末子らしい自由な発想が武器になる一方、枠組みの中で成果を出す訓練は後から積み上げてきたのではないでしょうか。" },
+      { theme: "恋愛", text: "甘え上手な面がある一方、本気で頼られると急に距離を取りたくなる、自由と依存への複雑な感情があります。" },
+      { theme: "金運", text: "計画性より直感で動くタイプで、独立や留学のような経験にお金を使うことへの抵抗が少ない傾向です。" },
+      { theme: "家族", text: "守られる立場に慣れていた分、対等な関係として家族と向き合い直す作業が20代を通して続いてきたはずです。" },
+    ],
   },
   {
     id: "male-only-child-default",
@@ -191,6 +218,12 @@ export const PAST_READING_SEGMENTS: PastReadingSegment[] = [
       "一人っ子としての自己完結型の集中力が幼少期から一貫した強みになっています",
       "20〜23才の一人暮らし・転居が、自分で決める感覚を体得する転機になりやすい時期です",
       "28〜31才は仕事と家庭を本気で組み立て直すテーマが優勢になりやすい傾向です",
+    ],
+    themeInsights: [
+      { theme: "仕事", text: "一人で完結させる集中力が強みである一方、他者に任せることへの苦手意識がチームでの評価を下げる場面もあったはずです。" },
+      { theme: "恋愛", text: "一人の時間の心地よさを知っている分、関係を深める過程で「妥協」を学ぶのに時間がかかってきた傾向です。" },
+      { theme: "金運", text: "自分の判断基準がはっきりしている分、他人の意見に流されない堅実な金銭管理ができるタイプです。" },
+      { theme: "家族", text: "比較対象がいない環境で育った分、家庭を持つ側になったときの「当たり前」の作り方に迷いが生じやすい傾向があります。" },
     ],
   },
 ];

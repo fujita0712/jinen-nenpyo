@@ -13,6 +13,7 @@ import { PastReadingSegment } from "@/lib/mock/past-readings";
 import { FutureCell, FUTURE_THEMES } from "@/lib/mock/future-readings";
 import { PeriodType } from "@/lib/period-types";
 import { groupFutureSegments } from "@/lib/future-segments";
+import { computeDivinationSummary } from "@/lib/divination-summary";
 
 const PERIOD_PDF_META: Record<PeriodType, { label: string; mark: string; color: string; bg: string }> = {
   decisive: { label: "勝負の年", mark: "◆", color: "#be123c", bg: "#fff1f2" },
@@ -143,6 +144,56 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     textAlign: "center",
   },
+  summaryBox: {
+    marginBottom: 16,
+    padding: 10,
+    borderWidth: 0.5,
+    borderColor: "#E5E0DC",
+    borderRadius: 3,
+  },
+  summaryTitle: {
+    fontSize: 9,
+    fontWeight: 700,
+    color: "#5C7C7A",
+    marginBottom: 6,
+  },
+  summaryRow: {
+    flexDirection: "row",
+    marginBottom: 3,
+  },
+  summaryLabel: {
+    width: 70,
+    fontSize: 8,
+    color: "#888888",
+  },
+  summaryValue: {
+    flex: 1,
+    fontSize: 8,
+    color: "#2A2A2A",
+  },
+  insightGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 16,
+  },
+  insightCard: {
+    width: "48%",
+    padding: 6,
+    borderWidth: 0.5,
+    borderColor: "#E5E0DC",
+    borderRadius: 3,
+  },
+  insightLabel: {
+    fontSize: 8,
+    color: "#888888",
+    marginBottom: 2,
+  },
+  insightText: {
+    fontSize: 8,
+    color: "#2A2A2A",
+    lineHeight: 1.4,
+  },
   pageFooter: {
     position: "absolute",
     bottom: 20,
@@ -169,6 +220,7 @@ function ReadingPdfDocument({
     day: "numeric",
   });
   const segments = groupFutureSegments(future);
+  const divination = computeDivinationSummary(input);
 
   return (
     <Document>
@@ -180,6 +232,37 @@ function ReadingPdfDocument({
 
       <Page size="A4" style={styles.page}>
         <Text style={styles.sectionTitle}>過去年表</Text>
+
+        <View style={styles.summaryBox} wrap={false}>
+          <Text style={styles.summaryTitle}>4占術 算出結果</Text>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>西洋占星術</Text>
+            <Text style={styles.summaryValue}>
+              太陽星座 {divination.sunSign}
+              {divination.nearSaturnReturn ? "（土星回帰の時期に近い）" : ""}
+            </Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>数秘術</Text>
+            <Text style={styles.summaryValue}>
+              ライフパス {divination.lifePath} ／ ディスティニー {divination.destiny} ／ ソウル {divination.soul}
+            </Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>四柱推命</Text>
+            <Text style={styles.summaryValue}>
+              年柱 {divination.yearPillar} ・ 月柱 {divination.monthPillar} ・ 日柱 {divination.dayPillar} ・ 時柱{" "}
+              {divination.hourPillar}（{divination.daiun}）
+            </Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>タロット</Text>
+            <Text style={styles.summaryValue}>
+              {divination.tarotName}（{divination.tarotReversed ? "逆位置" : "正位置"}）
+            </Text>
+          </View>
+        </View>
+
         {past.chapters.map((chapter) => {
           const meta = PERIOD_PDF_META[chapter.periodType];
           return (
@@ -197,6 +280,16 @@ function ReadingPdfDocument({
             </View>
           );
         })}
+        <Text style={styles.summaryTitle}>テーマ別の傾向</Text>
+        <View style={styles.insightGrid}>
+          {past.themeInsights.map((insight) => (
+            <View key={insight.theme} style={styles.insightCard}>
+              <Text style={styles.insightLabel}>{insight.theme}</Text>
+              <Text style={styles.insightText}>{insight.text}</Text>
+            </View>
+          ))}
+        </View>
+
         <Text style={styles.pageFooter} render={({ pageNumber }) => `${pageNumber}`} fixed />
       </Page>
 
