@@ -14,46 +14,54 @@ const client = new Anthropic();
 // (zodOutputFormat ヘルパーはインストール済み zod のバージョンと型が合わないため使わない)
 const PERIOD_TYPE_ENUM = ["decisive", "turning_point", "endurance", "steady"] as const;
 
-const RESPONSE_JSON_SCHEMA = {
+// Claude の構造化出力(output_config.format)は配列の minItems/maxItems を実質サポートしない
+// (0 or 1 のみ許可され、それ以外を指定すると400エラーになる)。配列の長さで「章が足りない」
+// 不具合が起きたため、chapter1〜4 / highlight1〜3 を個別の必須プロパティとして持たせ、
+// スキーマの required 制約(こちらは確実に強制される)で4章・3行を保証する。
+const CHAPTER_SCHEMA = {
   type: "object",
   properties: {
-    chapters: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          title: { type: "string" },
-          ageRange: { type: "string" },
-          body: { type: "string" },
-          periodType: { type: "string", enum: PERIOD_TYPE_ENUM as unknown as string[] },
-          periodAge: { type: "string" },
-        },
-        required: ["title", "ageRange", "body", "periodType", "periodAge"],
-        additionalProperties: false,
-      },
-    },
-    highlights: {
-      type: "array",
-      items: { type: "string" },
-    },
+    title: { type: "string" },
+    ageRange: { type: "string" },
+    body: { type: "string" },
+    periodType: { type: "string", enum: PERIOD_TYPE_ENUM as unknown as string[] },
+    periodAge: { type: "string" },
   },
-  required: ["chapters", "highlights"],
+  required: ["title", "ageRange", "body", "periodType", "periodAge"],
   additionalProperties: false,
 } as const;
 
+const RESPONSE_JSON_SCHEMA = {
+  type: "object",
+  properties: {
+    chapter1: CHAPTER_SCHEMA,
+    chapter2: CHAPTER_SCHEMA,
+    chapter3: CHAPTER_SCHEMA,
+    chapter4: CHAPTER_SCHEMA,
+    highlight1: { type: "string" },
+    highlight2: { type: "string" },
+    highlight3: { type: "string" },
+  },
+  required: ["chapter1", "chapter2", "chapter3", "chapter4", "highlight1", "highlight2", "highlight3"],
+  additionalProperties: false,
+} as const;
+
+const ChapterZodSchema = z.object({
+  title: z.string(),
+  ageRange: z.string(),
+  body: z.string(),
+  periodType: z.enum(PERIOD_TYPE_ENUM),
+  periodAge: z.string(),
+});
+
 const ResponseSchema = z.object({
-  chapters: z
-    .array(
-      z.object({
-        title: z.string(),
-        ageRange: z.string(),
-        body: z.string(),
-        periodType: z.enum(PERIOD_TYPE_ENUM),
-        periodAge: z.string(),
-      })
-    )
-    .min(4),
-  highlights: z.array(z.string()).min(3),
+  chapter1: ChapterZodSchema,
+  chapter2: ChapterZodSchema,
+  chapter3: ChapterZodSchema,
+  chapter4: ChapterZodSchema,
+  highlight1: z.string(),
+  highlight2: z.string(),
+  highlight3: z.string(),
 });
 
 const SYSTEM_PROMPT = `あなたは「人生年表」というサービスの過去年表(無料鑑定)の文章を書く、腕利きの占い師です。
@@ -130,10 +138,40 @@ export async function generatePastReading(
     throw new Error("no text block in response");
   }
 
-  const parsed = ResponseSchema.parse(JSON.parse(textBlock.text));
+  if (response.stop_reason === "max_tokens") {
+    console.error("generate-past-reading hit max_tokens; output_tokens:", response.usage?.output_tokens);
+  }
 
-  const chapters = parsed.chapters.slice(0, 4);
-  const highlights = parsed.highlights.slice(0, 3);
+  let parsedJson: unknown;
+  try {
+    parsedJson = JSON.parse(textBlock.text);
+  } catch (err) {
+    console.error(
+      "generate-past-reading JSON parse failed. stop_reason:",
+      response.stop_reason,
+      "output_tokens:",
+      response.usage?.output_tokens,
+      "text tail:",
+      textBlock.text.slice(-300)
+    );
+    throw err;
+  }
+
+  let parsed: z.infer<typeof ResponseSchema>;
+  try {
+    parsed = ResponseSchema.parse(parsedJson);
+  } catch (err) {
+    console.error(
+      "generate-past-reading schema validation failed. stop_reason:",
+      response.stop_reason,
+      "output_tokens:",
+      response.usage?.output_tokens
+    );
+    throw err;
+  }
+
+  const chapters = [parsed.chapter1, parsed.chapter2, parsed.chapter3, parsed.chapter4] as const;
+  const highlights = [parsed.highlight1, parsed.highlight2, parsed.highlight3] as const;
 
   const allText = [...chapters.map((c) => c.body), ...highlights].join("\n");
   if (containsBannedExpression(allText)) {
