@@ -10,9 +10,8 @@ import {
 } from "@react-pdf/renderer";
 import { ReadingInput } from "@/lib/types";
 import { PastReadingSegment } from "@/lib/mock/past-readings";
-import { FutureCell, FUTURE_THEMES } from "@/lib/mock/future-readings";
+import { FutureCell } from "@/lib/mock/future-readings";
 import { PeriodType } from "@/lib/period-types";
-import { groupFutureSegments } from "@/lib/future-segments";
 import { computeDivinationSummary } from "@/lib/divination-summary";
 
 const PERIOD_PDF_META: Record<PeriodType, { label: string; mark: string; color: string; bg: string }> = {
@@ -90,59 +89,44 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 1.7,
   },
-  yearBlock: {
-    marginBottom: 14,
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#E5E0DC",
-    paddingBottom: 10,
-  },
-  yearHeaderRow: {
+  tableHeaderRow: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 6,
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#5C7C7A",
+    paddingBottom: 4,
+    marginBottom: 4,
   },
-  yearLabel: {
-    fontSize: 11,
+  tableHeaderCell: {
+    fontSize: 8,
     fontWeight: 700,
     color: "#5C7C7A",
   },
-  themeRow: {
+  tableRow: {
     flexDirection: "row",
-    marginBottom: 4,
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#E5E0DC",
+    paddingVertical: 6,
   },
-  themeLabel: {
-    width: 40,
+  cellAge: {
+    width: 60,
+    paddingRight: 6,
+  },
+  cellAgeText: {
     fontSize: 9,
-    color: "#888888",
-  },
-  themeText: {
-    flex: 1,
-    fontSize: 9,
-    lineHeight: 1.5,
-  },
-  adviceBox: {
-    marginTop: 4,
-    padding: 6,
-    backgroundColor: "#FFFBEB",
-    borderRadius: 3,
-  },
-  adviceLabel: {
-    fontSize: 8,
     fontWeight: 700,
-    color: "#B45309",
-    marginBottom: 2,
+    color: "#2A2A2A",
   },
-  adviceText: {
-    fontSize: 9,
-    color: "#78350F",
-    lineHeight: 1.4,
+  cellFlow: {
+    flex: 1,
+    paddingRight: 6,
   },
-  quietRow: {
+  cellAdvice: {
+    width: 150,
+  },
+  cellBodyText: {
     fontSize: 8,
-    color: "#AAAAAA",
-    marginBottom: 8,
-    textAlign: "center",
+    lineHeight: 1.5,
+    color: "#2A2A2A",
   },
   summaryBox: {
     marginBottom: 16,
@@ -219,8 +203,19 @@ function ReadingPdfDocument({
     month: "long",
     day: "numeric",
   });
-  const segments = groupFutureSegments(future);
   const divination = computeDivinationSummary(input);
+  const maxYearOffset = Math.max(...future.map((c) => c.yearOffset));
+  const futureYears = Array.from({ length: maxYearOffset + 1 }, (_, yearOffset) => {
+    const cell = future.find((c) => c.yearOffset === yearOffset);
+    return {
+      yearOffset,
+      age: cell?.age ?? 0,
+      free: yearOffset === 0,
+      periodType: cell?.periodType ?? ("steady" as PeriodType),
+      flow: cell?.flow ?? "",
+      advice: cell?.advice ?? "",
+    };
+  });
 
   return (
     <Document>
@@ -294,49 +289,35 @@ function ReadingPdfDocument({
       </Page>
 
       <Page size="A4" style={styles.page}>
-        <Text style={styles.sectionTitle}>未来年表（20年 × 4テーマ）</Text>
-        {segments.map((segment) => {
-          if (segment.kind === "quiet") {
-            const label =
-              segment.fromOffset === segment.toOffset
-                ? `${segment.fromAge}才頃`
-                : `${segment.fromAge}〜${segment.toAge}才頃`;
-            return (
-              <Text key={`quiet-${segment.fromOffset}`} style={styles.quietRow}>
-                {label}・大きな変化は少なく、穏やかに過ぎやすい時期
-              </Text>
-            );
-          }
-          const label = segment.isFree ? "直近12ヶ月" : `${segment.age}才頃`;
-          const meta = PERIOD_PDF_META[segment.periodType];
+        <Text style={styles.sectionTitle}>未来年表</Text>
+        <View style={styles.tableHeaderRow}>
+          <Text style={[styles.tableHeaderCell, styles.cellAge]}>年齢</Text>
+          <Text style={[styles.tableHeaderCell, styles.cellFlow]}>運気の流れ</Text>
+          <Text style={[styles.tableHeaderCell, styles.cellAdvice]}>アドバイス</Text>
+        </View>
+        {futureYears.map((y) => {
+          const meta = PERIOD_PDF_META[y.periodType];
           return (
-            <View key={segment.yearOffset} style={styles.yearBlock} wrap={false}>
-              <View style={styles.yearHeaderRow}>
-                <Text style={styles.yearLabel}>{label}</Text>
-                {segment.periodType !== "steady" && (
+            <View key={y.yearOffset} style={styles.tableRow} wrap={false}>
+              <View style={styles.cellAge}>
+                <Text style={styles.cellAgeText}>{y.free ? "直近12ヶ月" : `${y.age}才`}</Text>
+                {y.periodType !== "steady" && (
                   <Text
-                    style={[styles.periodBadge, { color: meta.color, backgroundColor: meta.bg }]}
+                    style={[
+                      styles.periodBadge,
+                      { color: meta.color, backgroundColor: meta.bg, marginTop: 2, alignSelf: "flex-start" },
+                    ]}
                   >
                     {meta.mark} {meta.label}
                   </Text>
                 )}
               </View>
-              {FUTURE_THEMES.map((theme) => {
-                const cell = segment.cellsByTheme[theme];
-                if (!cell) return null;
-                return (
-                  <View key={theme} style={styles.themeRow}>
-                    <Text style={styles.themeLabel}>{theme}</Text>
-                    <Text style={styles.themeText}>{cell.text}</Text>
-                  </View>
-                );
-              })}
-              {segment.advice && (
-                <View style={styles.adviceBox}>
-                  <Text style={styles.adviceLabel}>アドバイス</Text>
-                  <Text style={styles.adviceText}>{segment.advice}</Text>
-                </View>
-              )}
+              <View style={styles.cellFlow}>
+                <Text style={styles.cellBodyText}>{y.flow}</Text>
+              </View>
+              <View style={styles.cellAdvice}>
+                <Text style={styles.cellBodyText}>{y.advice}</Text>
+              </View>
             </View>
           );
         })}

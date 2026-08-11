@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { FutureCell, FUTURE_THEMES } from "@/lib/mock/future-readings";
+import { FutureCell } from "@/lib/mock/future-readings";
 import { PERIOD_META } from "@/lib/period-types";
-import { groupFutureSegments, HighlightSegment, QuietSegment } from "@/lib/future-segments";
 import FutureIntensityTimeline from "@/components/FutureIntensityTimeline";
 
 export default function FutureYearTablePreview({
@@ -13,24 +12,64 @@ export default function FutureYearTablePreview({
   paid: boolean;
   paywallHref: string;
 }) {
-  const segments = groupFutureSegments(cells);
+  const maxYearOffset = Math.max(...cells.map((c) => c.yearOffset));
+  const years = Array.from({ length: maxYearOffset + 1 }, (_, yearOffset) => {
+    const cell = cells.find((c) => c.yearOffset === yearOffset);
+    return {
+      yearOffset,
+      age: cell?.age ?? 0,
+      free: yearOffset === 0,
+      periodType: cell?.periodType ?? "steady",
+      flow: cell?.flow ?? "",
+      advice: cell?.advice ?? "",
+    };
+  });
 
   return (
     <div>
       <FutureIntensityTimeline cells={cells} />
-
-      <div className="space-y-4">
-        {segments.map((segment) =>
-          segment.kind === "quiet" ? (
-            <QuietRow key={`quiet-${segment.fromOffset}`} segment={segment} />
-          ) : (
-            <HighlightCard key={segment.yearOffset} segment={segment} paid={paid} />
-          )
-        )}
+      <div className="overflow-x-auto -mx-6 px-6">
+        <table className="w-full min-w-[560px] border-collapse text-sm">
+          <thead>
+            <tr className="text-left text-xs text-gray-400 border-b border-gray-200">
+              <th className="py-2 pr-3 font-medium w-20">年齢</th>
+              <th className="py-2 pr-3 font-medium">運気の流れ</th>
+              <th className="py-2 font-medium w-56">アドバイス</th>
+            </tr>
+          </thead>
+          <tbody>
+            {years.map((y) => {
+              const meta = PERIOD_META[y.periodType];
+              const visible = paid || y.free;
+              return (
+                <tr key={y.yearOffset} className={`border-b border-gray-100 ${meta.borderClassName} pl-2`}>
+                  <td className="py-3 pr-3 align-top whitespace-nowrap">
+                    <div className="text-gray-800">{y.free ? "直近12ヶ月" : `${y.age}才`}</div>
+                    {y.periodType !== "steady" && (
+                      <span
+                        className={`inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${meta.badgeClassName}`}
+                      >
+                        <span aria-hidden>{meta.mark}</span>
+                        {meta.label}
+                      </span>
+                    )}
+                    {y.free && <div className="text-[10px] text-jade mt-1">無料公開中</div>}
+                  </td>
+                  <td className="py-3 pr-3 align-top text-gray-700 leading-snug relative">
+                    {visible ? y.flow : <MaskedText />}
+                  </td>
+                  <td className="py-3 align-top text-gray-700 leading-snug relative">
+                    {visible ? y.advice : <MaskedText short />}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
 
       {!paid && (
-        <div className="text-center pt-6">
+        <div className="text-center pt-8">
           <Link
             href={paywallHref}
             className="inline-block px-8 py-4 rounded-full bg-jade text-white text-lg font-medium hover:bg-jade-dark transition-colors"
@@ -43,75 +82,10 @@ export default function FutureYearTablePreview({
   );
 }
 
-function QuietRow({ segment }: { segment: QuietSegment }) {
-  const label =
-    segment.fromOffset === segment.toOffset
-      ? `${segment.fromAge}才頃`
-      : `${segment.fromAge}〜${segment.toAge}才頃`;
+function MaskedText({ short }: { short?: boolean }) {
   return (
-    <div className="flex items-center gap-3 py-1 px-2 text-xs text-gray-400">
-      <span className="flex-1 h-px bg-gray-200" />
-      <span>{label}・大きな変化は少なく、穏やかに過ぎやすい時期</span>
-      <span className="flex-1 h-px bg-gray-200" />
-    </div>
-  );
-}
-
-function HighlightCard({ segment, paid }: { segment: HighlightSegment; paid: boolean }) {
-  const meta = PERIOD_META[segment.periodType];
-  const visible = paid || segment.isFree;
-  const isBig = segment.periodType === "decisive" || segment.periodType === "turning_point";
-
-  return (
-    <div
-      className={`border border-gray-100 rounded-lg overflow-hidden ${meta.borderClassName} ${
-        isBig ? "shadow-sm" : ""
-      }`}
-    >
-      <div className="bg-jade/10 px-4 py-2 flex flex-wrap items-center gap-2">
-        <span className={`font-medium text-jade-dark ${isBig ? "text-base" : "text-xs"}`}>
-          {segment.isFree ? "直近12ヶ月" : `${segment.age}才頃`}
-        </span>
-        {segment.isFree && <span className="text-jade text-xs">無料公開中</span>}
-        {segment.periodType !== "steady" && (
-          <span
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-medium ${meta.badgeClassName} ${
-              isBig ? "text-xs" : "text-[11px]"
-            }`}
-          >
-            <span aria-hidden>{meta.mark}</span>
-            {meta.label}
-          </span>
-        )}
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-gray-100">
-        {FUTURE_THEMES.map((theme) => {
-          const cell = segment.cellsByTheme[theme];
-          return (
-            <div key={theme} className="bg-white p-3 relative min-h-[92px]">
-              <p className="text-xs text-gray-400 mb-1">{theme}</p>
-              {visible ? (
-                <p className="text-sm text-gray-700 leading-snug">{cell?.text}</p>
-              ) : (
-                <>
-                  <p className="text-sm text-gray-700 leading-snug pixelated-overlay">{cell?.text}</p>
-                  <div className="absolute inset-0 flex items-center justify-center bg-white/40">
-                    <span className="text-[10px] text-gray-400">課金すると全文表示されます</span>
-                  </div>
-                </>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {visible && segment.advice && (
-        <div className="px-4 py-3 bg-amber-50/60 border-t border-amber-100">
-          <p className="text-xs font-medium text-amber-700 mb-0.5">アドバイス</p>
-          <p className="text-sm text-amber-900 leading-snug">{segment.advice}</p>
-        </div>
-      )}
-    </div>
+    <span className="text-xs text-gray-400">
+      {short ? "課金すると表示されます" : "課金すると全文表示されます"}
+    </span>
   );
 }
