@@ -12,6 +12,18 @@ const YEAR_COUNT = 20;
 
 const PERIOD_TYPE_ENUM = ["decisive", "turning_point", "endurance", "steady"] as const;
 
+// 稀にAIがperiodTypeの内部ラベル(英単語)を日本語文中にそのまま書いてしまうことがあるため、
+// 万一漏れても表示前に日本語表現へ置き換える安全策
+const PERIOD_TYPE_LEAK_FIX: [RegExp, string][] = [
+  [/turning_point/gi, "転機"],
+  [/decisive/gi, "勝負の年"],
+  [/endurance/gi, "耐える時期"],
+  [/steady/gi, "安定期"],
+];
+function sanitizePeriodTypeLeak(text: string): string {
+  return PERIOD_TYPE_LEAK_FIX.reduce((acc, [pattern, replacement]) => acc.replace(pattern, replacement), text);
+}
+
 const RESPONSE_JSON_SCHEMA = {
   type: "object",
   properties: {
@@ -65,9 +77,10 @@ periodTypeが"steady"以外の年(decisive/turning_point/endurance)は特に、�
    - "endurance"(耐える時期): プレッシャーや葛藤を抱えながら耐える傾向がある年
    - "steady"(安定期): 落ち着いて過ごしやすい年
    20年間のうち大半は"steady"とし、"decisive"は2〜3年、"turning_point"は2〜4年、"endurance"は2〜3年程度に絞ること(多用しすぎない)。土星回帰にあたる年は"turning_point"または"decisive"を優先すること。
-5. 各年に flow(その年の運気の流れ)を1つ書くこと。仕事・恋愛・金運・家族という人生の主要な領域を念頭に置きつつ、それらを機械的に列挙するのではなく、その年全体としてどんな流れ・エネルギーの年なのかを80〜120文字程度の一つながりの文章にまとめること。periodTypeが"steady"の年は淡々とした短めの記述で構わないが、"decisive"「"turning_point"「"endurance"の年は、この人固有の具体的な状況が伝わる書き方にすること。
-6. 各年に advice(一言アドバイス)を1つ添えること。periodTypeが"decisive"「"turning_point"「"endurance"の年は、flowの内容と具体的に紐づいた、この年ならではの行動や心構えを20〜40文字程度で書くこと。「一人で抱え込まず、早めに相談を」のような汎用フレーズの使い回しは避け、その年の具体的な状況(何についての決断か、何が変わるのか)が分かるアドバイスにすること。"steady"の年は「今のペースを維持で十分」のような軽い一言で構わない。
-7. 次の表現は絶対に使用禁止: 「当たる」「必ずそうなる」「絶対」「100%」「必ず」「儲かる」「治る」「寿命」「あなたにだけ当たる」。代わりに「〜しやすい」「テーマが優勢」「傾向がある」「タイミングとして」「選択肢が増える」のような中立的な表現を使うこと。
+5. 各年に flow(その年の運気の流れ)を1つ書くこと。仕事・恋愛・金運・家族という人生の主要な領域を念頭に置きつつ、それらを機械的に列挙するのではなく、その年全体としてどんな流れ・エネルギーの年なのかを一つながりの文章にまとめること。periodTypeが steady の年は80〜120文字程度の落ち着いた記述で構わないが、decisive・turning_point・endurance の年は180〜260文字程度まで厚みを持たせ、この人固有の具体的な状況(何が起きやすいか、なぜそうなるか、周囲との関係にどう影響するか)が伝わる読みごたえのある書き方にすること。
+6. 各年に advice(一言アドバイス)を1つ添えること。periodTypeが decisive・turning_point・endurance の年は、flowの内容と具体的に紐づいた、この年ならではの行動や心構えを60〜100文字程度で書くこと。「一人で抱え込まず、早めに相談を」のような汎用フレーズの使い回しは避け、その年の具体的な状況(何についての決断か、何が変わるのか、どう動けばいいか)まで踏み込んだアドバイスにすること。steady の年は「今のペースを維持で十分」のような軽い一言で構わない。
+7. 重要: decisive / turning_point / endurance / steady はJSONのperiodTypeフィールドに入れる分類ラベルであり、内部処理用の英単語である。flowやadviceの本文(日本語の文章)の中にこれらの英単語をそのまま書き込むことは絶対に禁止する。文章中では「転機」「勝負の年」「耐える時期」のように必ず日本語の言葉で表現すること。
+8. 次の表現は絶対に使用禁止: 「当たる」「必ずそうなる」「絶対」「100%」「必ず」「儲かる」「治る」「寿命」「あなたにだけ当たる」。代わりに「〜しやすい」「テーマが優勢」「傾向がある」「タイミングとして」「選択肢が増える」のような中立的な表現を使うこと。
 
 出力は指定されたJSONスキーマに厳密に従い、yearsは必ず20件(yearOffset 0〜19)にすること。`;
 
@@ -101,7 +114,7 @@ export async function generateFutureReading(
 
   const response = await client.messages.create({
     model: "claude-sonnet-5",
-    max_tokens: 6000,
+    max_tokens: 8000,
     thinking: { type: "disabled" },
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content: userPrompt }],
@@ -130,8 +143,8 @@ export async function generateFutureReading(
       age: age + yearOffset,
       free: yearOffset === 0,
       periodType: year?.periodType ?? "steady",
-      flow: year?.flow ?? "落ち着いて過ごせる時期です。",
-      advice: year?.advice ?? "今のペースを維持で十分です。",
+      flow: sanitizePeriodTypeLeak(year?.flow ?? "落ち着いて過ごせる時期です。"),
+      advice: sanitizePeriodTypeLeak(year?.advice ?? "今のペースを維持で十分です。"),
     });
   }
 
